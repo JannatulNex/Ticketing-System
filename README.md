@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+**Customer Support System**
 
-## Getting Started
+- Monorepo with `frontend` (Next.js + Tailwind + shadcn-style components) and `backend` (Express + Prisma + Socket.IO).
+- Shared Zod schemas live in `packages/schemas` for DRY validation/types across FE/BE.
 
-First, run the development server:
+**Requirements**
+- Node.js 20+
+- MySQL running locally (or Docker)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**Setup**
+- Copy `backend/.env.example` to `backend/.env` and adjust values.
+- Install deps:
+  - `npm install` (from repo root; uses workspaces)
+- Database:
+  - `npm -w backend run prisma:generate`
+  - `npm -w backend run prisma:migrate -- --name init`
+  - `npm -w backend run seed`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Run**
+- Backend: `cd my-app/backend && npm install && npm run dev` (http://localhost:4000)
+- Frontend (existing app in `my-app`): `cd my-app && npm install && npm run dev` (http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Notes**
+- UI components are shadcn-style and colocated under `frontend/components/ui` to avoid CLI dependency and keep DRY.
+- Validation schemas are shared via `@support/schemas` package.
+- Socket.IO room key: `ticket-${ticketId}`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Next Steps**
+- Finish admin dashboard and status update UI.
+- Implement file upload (attachments) with Multer + FE uploader.
+- Add auth guard and role-based redirects on FE.
+- Harden Socket.IO auth via JWT handshake and persist userId from JWT.

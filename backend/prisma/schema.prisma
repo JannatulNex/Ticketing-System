@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int           @id @default(autoincrement())
+  username String
+  email    String        @unique
+  password String
+  role     Role          @default(CUSTOMER)
+  tickets  Ticket[]
+  comments Comment[]
+  chats    ChatMessage[] @relation("UserMessages")
+}
+
+model Ticket {
+  id          Int           @id @default(autoincrement())
+  subject     String
+  description String
+  category    String
+  priority    String
+  status      Status        @default(OPEN)
+  attachment  String?
+  userId      Int
+  user        User          @relation(fields: [userId], references: [id])
+  comments    Comment[]
+  chats       ChatMessage[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  text      String
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  message   String
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  senderId  Int
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum Status {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
