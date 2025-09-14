@@ -19,33 +19,40 @@ export default function TicketsPage() {
   );
 
   return (
-    <main className="container py-8 space-y-4">
+    <main className="max-w-5xl mx-auto px-6 py-8 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Tickets</h1>
-        <Button asChild>
-          <Link href="/tickets/new">New Ticket</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/tickets/new">New Ticket</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/admin/tickets">Admin</Link>
+          </Button>
+        </div>
       </div>
       {isLoading && <p>Loading...</p>}
       {error && <p className="text-red-600">{String(error)}</p>}
-      <div className="overflow-x-auto">
+      <div className="w-full overflow-hidden rounded-md border border-neutral-200 dark:border-neutral-800">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left border-b">
-              <th className="py-2 pr-4">ID</th>
-              <th className="py-2 pr-4">Subject</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Actions</th>
+          <thead className="bg-neutral-50/60 dark:bg-neutral-900/30">
+            <tr className="text-left">
+              <th className="py-3 px-4">ID</th>
+              <th className="py-3 px-4">Subject</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Priority</th>
+              <th className="py-3 px-4">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {Array.isArray(data) && data.length > 0 ? (
               data.map((t: any) => (
-                <tr key={t.id} className="border-b">
-                  <td className="py-2 pr-4">{t.id}</td>
-                  <td className="py-2 pr-4">{t.subject}</td>
-                  <td className="py-2 pr-4">{t.status}</td>
-                  <td className="py-2 pr-4">
+                <tr key={t.id}>
+                  <td className="py-3 px-4">{t.id}</td>
+                  <td className="py-3 px-4">{t.subject}</td>
+                  <td className="py-3 px-4"><span className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-xs">{t.status}</span></td>
+                  <td className="py-3 px-4">{t.priority}</td>
+                  <td className="py-3 px-4">
                     <Button variant="outline" asChild>
                       <Link href={`/tickets/${t.id}`}>View</Link>
                     </Button>
@@ -54,7 +61,7 @@ export default function TicketsPage() {
               ))
             ) : (
               <tr>
-                <td className="py-4" colSpan={4}>
+                <td className="py-4 px-4" colSpan={5}>
                   No tickets yet.
                 </td>
               </tr>
@@ -65,4 +72,3 @@ export default function TicketsPage() {
     </main>
   );
 }
-

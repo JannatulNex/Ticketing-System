@@ -8,7 +8,7 @@ export default function DashboardPage() {
   useEffect(() => setToken(localStorage.getItem("token")), []);
 
   return (
-    <main className="container py-10 space-y-4">
+    <main className="max-w-4xl mx-auto px-6 py-10 space-y-4">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       {token ? (
         <div className="space-y-2">
@@ -34,4 +34,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-

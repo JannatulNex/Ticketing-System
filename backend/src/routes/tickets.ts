@@ -1,10 +1,27 @@
 import { Router, type Request, type Response } from 'express';
 import type { PrismaClient } from '@prisma/client';
-import { AddCommentInput, CreateTicketInput, UpdateTicketStatusInput } from '@support/schemas';
-import { requireRole } from '../middleware/auth';
+import { AddCommentInput, CreateTicketInput, UpdateTicketStatusInput, UpdateTicketInput } from '@support/schemas';
+import multer, { diskStorage } from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { requireRole } from '../middleware/auth.js';
 
 export const ticketsRouter = (prisma: PrismaClient) => {
   const router = Router();
+
+  // Ensure uploads dir exists
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+  const storage = diskStorage({
+    destination: (_req: any, _file: any, cb: (err: any, dest: string) => void) => cb(null, uploadsDir),
+    filename: (_req: any, file: any, cb: (err: any, name: string) => void) => {
+      const safe = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const name = `${Date.now()}_${safe}`;
+      cb(null, name);
+    },
+  });
+  const upload = multer({ storage });
 
   // List tickets - customers see own, admins see all
   router.get('/', async (req: Request, res: Response) => {
@@ -32,6 +49,19 @@ export const ticketsRouter = (prisma: PrismaClient) => {
     if (!ticket) return res.status(404).json({ message: 'Not found' });
     if (user.role !== 'ADMIN' && ticket.userId !== user.id) return res.status(403).json({ message: 'Forbidden' });
     res.json(ticket);
+  });
+
+  // Update ticket (owner or admin)
+  router.put('/:id', async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const parsed = UpdateTicketInput.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error.flatten());
+    const user = req.user!;
+    const existing = await prisma.ticket.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: 'Not found' });
+    if (user.role !== 'ADMIN' && existing.userId !== user.id) return res.status(403).json({ message: 'Forbidden' });
+    const updated = await prisma.ticket.update({ where: { id }, data: parsed.data });
+    res.json(updated);
   });
 
   // Update status (admin)
@@ -66,6 +96,20 @@ export const ticketsRouter = (prisma: PrismaClient) => {
       data: { text: parsed.data.text, ticketId: id, userId: user.id },
     });
     res.status(201).json(comment);
+  });
+
+  // Upload attachment (owner or admin)
+  router.post('/:id/attachment', upload.single('file'), async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    const user = req.user!;
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ message: 'Not found' });
+    if (user.role !== 'ADMIN' && ticket.userId !== user.id) return res.status(403).json({ message: 'Forbidden' });
+    const anyReq = req as Request & { file?: { filename?: string } };
+    if (!anyReq.file?.filename) return res.status(400).json({ message: 'No file uploaded' });
+    const urlPath = `/uploads/${anyReq.file.filename}`;
+    const updated = await prisma.ticket.update({ where: { id }, data: { attachment: urlPath } });
+    res.status(200).json(updated);
   });
 
   return router;

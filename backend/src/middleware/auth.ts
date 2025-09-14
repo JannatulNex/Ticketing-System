@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { RoleEnum } from '@support/schemas';
 
 export interface AuthUser {
   id: number;
@@ -32,11 +31,10 @@ export const authenticate = (jwtSecret: string) => {
   };
 };
 
-export const requireRole = (role: typeof RoleEnum._def.values[number]) => {
+export const requireRole = (role: AuthUser['role']) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
     if (req.user.role !== role) return res.status(403).json({ message: 'Forbidden' });
     return next();
   };
 };
-
