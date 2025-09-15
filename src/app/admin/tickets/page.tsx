@@ -45,8 +45,8 @@ export default function AdminTicketsPage() {
       <h1 className="text-2xl font-semibold">Admin: All Tickets</h1>
       {isLoading && <p>Loading...</p>}
       {error && <p className="text-red-600">{String(error)}</p>}
-      <div className="w-full overflow-hidden rounded-md border border-neutral-200 dark:border-neutral-800">
-        <table className="w-full text-sm">
+      <div className="w-full overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-800">
+        <table className="w-full min-w-[760px] text-sm">
           <thead className="bg-neutral-50/60 dark:bg-neutral-900/30">
             <tr className="text-left">
               <th className="py-3 px-4">ID</th>

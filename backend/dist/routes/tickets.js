@@ -99,6 +99,22 @@ export const ticketsRouter = (prisma) => {
         });
         res.status(201).json(comment);
     });
+    // Chat messages (history)
+    router.get('/:id/messages', async (req, res) => {
+        const id = Number(req.params.id);
+        const user = req.user;
+        const ticket = await prisma.ticket.findUnique({ where: { id } });
+        if (!ticket)
+            return res.status(404).json({ message: 'Not found' });
+        if (user.role !== 'ADMIN' && ticket.userId !== user.id)
+            return res.status(403).json({ message: 'Forbidden' });
+        const messages = await prisma.chatMessage.findMany({
+            where: { ticketId: id },
+            orderBy: { createdAt: 'asc' },
+            include: { sender: { select: { id: true, username: true, role: true } } },
+        });
+        res.json(messages);
+    });
     // Upload attachment (owner or admin)
     router.post('/:id/attachment', upload.single('file'), async (req, res) => {
         const id = Number(req.params.id);

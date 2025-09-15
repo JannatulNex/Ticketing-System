@@ -31,6 +31,26 @@ app.use('/api/auth', authRouter(prisma, env.JWT_SECRET));
 app.use('/api', authenticate(env.JWT_SECRET));
 app.use('/api/tickets', ticketsRouter(prisma));
 
+// Direct message history endpoint (mirror of router, ensures availability)
+app.get('/api/tickets/:id/messages', async (req: any, res: any) => {
+  try {
+    const id = Number(req.params.id);
+    const user = req.user;
+    if (!Number.isFinite(id)) return res.status(400).json({ message: 'Invalid id' });
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ message: 'Not found' });
+    if (user?.role !== 'ADMIN' && ticket.userId !== user?.id) return res.status(403).json({ message: 'Forbidden' });
+    const messages = await prisma.chatMessage.findMany({
+      where: { ticketId: id },
+      orderBy: { createdAt: 'asc' },
+      include: { sender: { select: { id: true, username: true, role: true } } },
+    });
+    return res.json(messages);
+  } catch (e) {
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Socket.IO
 io.use((socket: any, next: any) => {
   next();
@@ -42,8 +62,11 @@ io.on('connection', (socket: any) => {
   });
   socket.on('message', async (payload: { ticketId: number; message: string; senderId: number }) => {
     const { ticketId, message, senderId } = payload;
-    await prisma.chatMessage.create({ data: { ticketId, message, senderId } });
-    io.to(`ticket-${ticketId}`).emit('message', { ticketId, message, senderId, createdAt: new Date() });
+    const saved = await prisma.chatMessage.create({
+      data: { ticketId, message, senderId },
+      include: { sender: { select: { id: true, username: true, role: true } } },
+    });
+    io.to(`ticket-${ticketId}`).emit('message', saved);
   });
 });
 

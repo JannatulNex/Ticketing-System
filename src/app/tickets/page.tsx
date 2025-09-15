@@ -2,6 +2,8 @@
 import useSWR from "swr";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
+import { decodeJwt } from "@/lib/jwt";
 
 const fetcher = async (url: string) => {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -13,6 +15,8 @@ const fetcher = async (url: string) => {
 };
 
 export default function TicketsPage() {
+  const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
+  const role = decodeJwt(token)?.role;
   const { data, error, isLoading } = useSWR(
     "http://localhost:4000/api/tickets",
     fetcher
@@ -26,15 +30,17 @@ export default function TicketsPage() {
           <Button asChild>
             <Link href="/tickets/new">New Ticket</Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link href="/admin/tickets">Admin</Link>
-          </Button>
+          {role === 'ADMIN' ? (
+            <Button variant="outline" asChild>
+              <Link href="/admin/tickets">Admin</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
       {isLoading && <p>Loading...</p>}
       {error && <p className="text-red-600">{String(error)}</p>}
-      <div className="w-full overflow-hidden rounded-md border border-neutral-200 dark:border-neutral-800">
-        <table className="w-full text-sm">
+      <div className="w-full overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-800">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-neutral-50/60 dark:bg-neutral-900/30">
             <tr className="text-left">
               <th className="py-3 px-4">ID</th>
