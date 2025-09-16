@@ -19,7 +19,7 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setError(null);
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/login", data);
+      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, data);
       localStorage.setItem("token", res.data.token);
       window.location.href = "/dashboard";
     } catch (e: any) {
