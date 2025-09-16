@@ -52,7 +52,9 @@ export default function TicketDetailsPage() {
 
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-    const s: Socket = io("http://localhost:4000");
+     const s: Socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+    transports: ["websocket"], // optional, ensures WebSocket connection
+  });
     socketRef.current = s;
     s.emit("join-room", id);
     s.on("message", (msg: Message) => {
