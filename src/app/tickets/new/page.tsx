@@ -16,7 +16,7 @@ export default function NewTicketPage() {
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(CreateTicketInput),
-    defaultValues: { priority: "Low", category: "General" } as any,
+    defaultValues: { priority: "Low", category: "General" },
   });
 
   const onSubmit = async (data: FormValues) => {
@@ -34,8 +34,8 @@ export default function NewTicketPage() {
       if (!res.ok) throw new Error("Failed to create ticket");
       const created = await res.json();
       window.location.href = `/tickets/${created.id}`;
-    } catch (e: any) {
-      setError(String(e?.message || e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to create ticket");
     }
   };
 

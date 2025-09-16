@@ -1,4 +1,4 @@
-export type DecodedToken = { id?: number; role?: 'ADMIN' | 'CUSTOMER'; [k: string]: any }
+export type DecodedToken = { id?: number; role?: 'ADMIN' | 'CUSTOMER'; [k: string]: unknown }
 
 export function decodeJwt(token?: string | null): DecodedToken | null {
   if (!token) return null

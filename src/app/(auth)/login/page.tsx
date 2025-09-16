@@ -32,8 +32,8 @@ export default function LoginPage() {
       localStorage.setItem("token", json.token);
       const role = decodeJwt(json.token)?.role;
       window.location.href = role === 'ADMIN' ? "/admin/tickets" : "/dashboard";
-    } catch (e: any) {
-      setError(e?.message || "Login failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Login failed");
     }
   };
 

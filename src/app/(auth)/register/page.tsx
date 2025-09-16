@@ -30,8 +30,8 @@ export default function RegisterPage() {
       const json = await res.json();
       localStorage.setItem("token", json.token);
       window.location.href = "/dashboard";
-    } catch (e: any) {
-      setError(e?.message || "Registration failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Registration failed");
     }
   };
 

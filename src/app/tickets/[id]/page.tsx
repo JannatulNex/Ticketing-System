@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import io, { Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
@@ -7,52 +7,68 @@ import { Textarea } from "@/components/ui/textarea";
 import { decodeJwt } from "@/lib/jwt";
 
 type Ticket = { id: number; subject: string; description: string; status: string; userId: number; attachment?: string | null };
+type CommentRow = { id: number; text: string; createdAt: string };
+type Message = { id?: number; message: string; senderId: number; createdAt: string; ticketId: number; sender?: { id: number; username: string; role: string } };
 
 export default function TicketDetailsPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params?.id);
   const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<CommentRow[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [messages, setMessages] = useState<{ id?: number; message: string; senderId: number; createdAt: string; sender?: { id: number; username: string; role: string } }[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const getToken = () => (typeof window !== "undefined" ? localStorage.getItem("token") : null);
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const t = getToken();
+    return t ? { Authorization: `Bearer ${t}` } : {};
+  }, []);
 
   useEffect(() => {
     const load = async () => {
-      const tRes = await fetch(`http://localhost:4000/api/tickets/${id}`, {
-        headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-      });
-      if (tRes.ok) setTicket(await tRes.json());
-      const cRes = await fetch(`http://localhost:4000/api/tickets/${id}/comments`, {
-        headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-      });
-      if (cRes.ok) setComments(await cRes.json());
-      const mRes = await fetch(`http://localhost:4000/api/tickets/${id}/messages`, {
-        headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
-      });
+      const tRes = await fetch(`http://localhost:4000/api/tickets/${id}`, { headers: getAuthHeaders() });
+      if (tRes.ok) {
+        const ticketData: Ticket = await tRes.json();
+        setTicket(ticketData);
+      }
+      const cRes = await fetch(`http://localhost:4000/api/tickets/${id}/comments`, { headers: getAuthHeaders() });
+      if (cRes.ok) {
+        const commentData: CommentRow[] = await cRes.json();
+        setComments(commentData);
+      }
+      const mRes = await fetch(`http://localhost:4000/api/tickets/${id}/messages`, { headers: getAuthHeaders() });
       if (mRes.ok) {
-        const history = await mRes.json();
-        setMessages(history.map((m: any) => ({ id: m.id, message: m.message, senderId: m.senderId, createdAt: m.createdAt, sender: m.sender })));
+        const history: Message[] = await mRes.json();
+        setMessages(history.map((m) => ({ id: m.id, message: m.message, senderId: m.senderId, createdAt: m.createdAt, sender: m.sender, ticketId: m.ticketId })));
       } else {
         // Clear to avoid stale UI when unauthorized
         setMessages([]);
       }
     };
     if (id) load();
-  }, [id]);
+  }, [id, getAuthHeaders]);
 
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
     const s: Socket = io("http://localhost:4000");
     socketRef.current = s;
     s.emit("join-room", id);
-    s.on("message", (msg: any) => {
+    s.on("message", (msg: Message) => {
       if (msg.ticketId === id) {
-        setMessages((prev) => [...prev, { id: msg.id, message: msg.message, senderId: msg.senderId, createdAt: msg.createdAt, sender: msg.sender }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: msg.id,
+            message: msg.message,
+            senderId: msg.senderId,
+            createdAt: msg.createdAt,
+            sender: msg.sender,
+            ticketId: msg.ticketId,
+          },
+        ]);
       }
     });
     return () => {
@@ -72,7 +88,7 @@ export default function TicketDetailsPage() {
       body: JSON.stringify({ text: newComment }),
     });
     if (res.ok) {
-      const created = await res.json();
+      const created: CommentRow = await res.json();
       setComments((prev) => [...prev, created]);
       setNewComment("");
     }
@@ -152,7 +168,7 @@ export default function TicketDetailsPage() {
         {ticket.attachment ? (
           <div className="text-sm">
             Current file: {" "}
-            <a className="text-blue-600 underline" href={`http://localhost:4000${ticket.attachment}`} target="_blank">
+            <a className="text-blue-600 underline" href={`http://localhost:4000${ticket.attachment}`} target="_blank" rel="noreferrer">
               View attachment
             </a>
           </div>

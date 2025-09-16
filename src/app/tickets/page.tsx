@@ -5,19 +5,21 @@ import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
 import { decodeJwt } from "@/lib/jwt";
 
-const fetcher = async (url: string) => {
+type TicketRow = { id: number; subject: string; status: string; priority?: string };
+
+function fetcher<T>(url: string): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("Failed to load tickets");
-  return res.json();
-};
+  return fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    .then((res) => {
+      if (!res.ok) throw new Error("Failed to load tickets");
+      return res.json() as Promise<T>;
+    });
+}
 
 export default function TicketsPage() {
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
   const role = decodeJwt(token)?.role;
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading } = useSWR<TicketRow[]>(
     "http://localhost:4000/api/tickets",
     fetcher
   );
@@ -52,7 +54,7 @@ export default function TicketsPage() {
           </thead>
           <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {Array.isArray(data) && data.length > 0 ? (
-              data.map((t: any) => (
+              data.map((t) => (
                 <tr key={t.id}>
                   <td className="py-3 px-4">{t.id}</td>
                   <td className="py-3 px-4">{t.subject}</td>

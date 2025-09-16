@@ -1,17 +1,18 @@
 "use client";
 import useSWR from "swr";
-import { Button } from "@/components/ui/button";
 import { Badge, statusToBadgeVariant } from "@/components/ui/badge";
 import { decodeJwt } from "@/lib/jwt";
 import { useEffect, useMemo } from "react";
 
-const fetcher = async (url: string) => {
+type AdminTicketRow = { id: number; subject: string; status: string; userId: number };
+
+const fetcher = async <T,>(url: string): Promise<T> => {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const res = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("Failed to load tickets");
-  return res.json();
+  return res.json() as Promise<T>;
 };
 
 export default function AdminTicketsPage() {
@@ -23,7 +24,7 @@ export default function AdminTicketsPage() {
     }
   }, [role]);
 
-  const { data, error, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR<AdminTicketRow[]>(
     "http://localhost:4000/api/tickets",
     fetcher
   );
@@ -58,7 +59,7 @@ export default function AdminTicketsPage() {
           </thead>
           <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {Array.isArray(data) && data.length > 0 ? (
-              data.map((t: any) => (
+              data.map((t) => (
                 <tr key={t.id}>
                   <td className="py-3 px-4">{t.id}</td>
                   <td className="py-3 px-4">{t.subject}</td>

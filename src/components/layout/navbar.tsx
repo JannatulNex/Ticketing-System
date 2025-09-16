@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { decodeJwt } from "@/lib/jwt";
 import { Button } from "@/components/ui/button";
-import { Badge, statusToBadgeVariant } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 
 export default function Navbar() {
   const [token, setToken] = useState<string | null>(null);
