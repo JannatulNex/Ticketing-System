@@ -2,7 +2,8 @@
 import useSWR from "swr";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useMemo } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useMemo, useState } from "react";
 import { decodeJwt } from "@/lib/jwt";
 
 type TicketRow = { id: number; subject: string; status: string; priority?: string };
@@ -19,22 +20,30 @@ function fetcher<T>(url: string): Promise<T> {
 export default function TicketsPage() {
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
   const role = decodeJwt(token)?.role;
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const { data, error, isLoading, mutate } = useSWR<TicketRow[]>(
     "http://localhost:4000/api/tickets",
     fetcher
   );
 
   const handleDelete = async (ticketId: number) => {
-    if (!token) return;
-    if (!window.confirm('Delete this ticket?')) return;
-    const res = await fetch(`http://localhost:4000/api/tickets/${ticketId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      mutate();
-    } else {
-      alert('Failed to delete ticket');
+    if (!token) {
+      alert('You must be logged in to delete this ticket.');
+      return;
+    }
+    try {
+      setDeletingId(ticketId);
+      const res = await fetch(`http://localhost:4000/api/tickets/${ticketId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        mutate();
+      } else {
+        alert('Failed to delete ticket');
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -79,9 +88,26 @@ export default function TicketsPage() {
                       <Button variant="outline" asChild>
                         <Link href={`/tickets/${t.id}`}>View</Link>
                       </Button>
-                      <Button variant="destructive" onClick={() => handleDelete(t.id)}>
-                        Delete
-                      </Button>
+                      <Button variant="outline" onClick={() => (window.location.href = `/tickets/${t.id}/edit`)}>Edit</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive">Delete</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete ticket</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. The ticket and all related messages will be permanently removed.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}>
+                              {deletingId === t.id ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </td>
                 </tr>

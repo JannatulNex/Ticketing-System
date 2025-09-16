@@ -9,30 +9,31 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@radix-ui/react-alert-dialog": "^1.1.15",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@support/schemas": "file:./packages/schemas",
+    "axios": "^1.7.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "next": "15.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.3",
-    "axios": "^1.7.2",
-    "zod": "^3.23.8",
     "react-hook-form": "^7.53.0",
-    "@hookform/resolvers": "^3.9.0",
     "socket.io-client": "^4.7.5",
     "swr": "^2.2.5",
-    "class-variance-authority": "^0.7.0",
     "tailwind-merge": "^2.3.0",
-    "clsx": "^2.1.1",
-    "@radix-ui/react-slot": "^1.0.2",
-    "@support/schemas": "file:./packages/schemas"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
-    "@eslint/eslintrc": "^3"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

@@ -1,5 +1,7 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
@@ -10,10 +12,20 @@ import { authenticate } from './middleware/auth.js';
 import { ticketsRouter } from './routes/tickets.js';
 const env = loadEnv();
 console.log('✅ Loaded ENV:', env); // Debug: দেখাবে env ঠিকমতো লোড হয়েছে
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.resolve(__dirname, '../uploads');
+const legacyUploadsDir = path.resolve(process.cwd(), 'uploads');
+const ensureUploadsDir = (dir) => {
+    if (!fs.existsSync(dir))
+        fs.mkdirSync(dir, { recursive: true });
+};
+ensureUploadsDir(uploadsDir);
+ensureUploadsDir(legacyUploadsDir);
 const app = express();
 app.use(cors({ origin: env.CORS_ORIGIN }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(legacyUploadsDir));
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: env.CORS_ORIGIN } });
 const prisma = new PrismaClient();

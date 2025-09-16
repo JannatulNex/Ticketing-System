@@ -2,8 +2,9 @@
 import useSWR from "swr";
 import { Badge, statusToBadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { decodeJwt } from "@/lib/jwt";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type AdminTicketRow = { id: number; subject: string; status: string; userId: number };
 
@@ -25,24 +26,32 @@ export default function AdminTicketsPage() {
     }
   }, [role]);
 
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const { data, error, isLoading, mutate } = useSWR<AdminTicketRow[]>(
     "http://localhost:4000/api/tickets",
     fetcher
   );
+
   const handleDelete = async (id: number) => {
-    if (!token) return;
-    if (!window.confirm('Delete this ticket?')) return;
-    const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      mutate();
-    } else {
-      alert('Failed to delete ticket');
+    if (!token) {
+      alert('You must be logged in to delete this ticket.');
+      return;
+    }
+    try {
+      setDeletingId(id);
+      const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        mutate();
+      } else {
+        alert('Failed to delete ticket');
+      }
+    } finally {
+      setDeletingId(null);
     }
   };
-
 
   const updateStatus = async (id: number, status: string) => {
     const res = await fetch(`http://localhost:4000/api/tickets/${id}/status`, {
@@ -96,9 +105,25 @@ export default function AdminTicketsPage() {
                     </select>
                   </td>
                   <td className="py-3 px-4">
-                    <Button variant="destructive" onClick={() => handleDelete(t.id)}>
-                      Delete
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive">Delete</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete ticket</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Deleting this ticket removes it for everyone. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(t.id)} disabled={deletingId === t.id}>
+                            {deletingId === t.id ? 'Deleting...' : 'Delete'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </td>
                 </tr>
               ))

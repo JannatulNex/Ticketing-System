@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 
 type FormValues = z.infer<typeof CreateTicketInput>;
 
 export default function NewTicketPage() {
   const [error, setError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(CreateTicketInput),
     defaultValues: { priority: "Low", category: "General" },
@@ -22,14 +24,20 @@ export default function NewTicketPage() {
   const onSubmit = async (data: FormValues) => {
     setError(null);
     const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("subject", data.subject);
+    formData.append("description", data.description);
+    formData.append("category", data.category);
+    formData.append("priority", data.priority);
+    if (attachment) {
+      formData.append("attachment", attachment);
+    }
+
     try {
       const res = await fetch("http://localhost:4000/api/tickets", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(data),
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
       });
       if (!res.ok) throw new Error("Failed to create ticket");
       const created = await res.json();
@@ -46,7 +54,7 @@ export default function NewTicketPage() {
           <h1 className="text-2xl font-semibold">New Ticket</h1>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <Label>Subject</Label>
               <Input {...register("subject")} />
@@ -85,6 +93,14 @@ export default function NewTicketPage() {
                   <option>Urgent</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <Label>Attachment</Label>
+              <FileDropzone
+                value={attachment}
+                onChange={setAttachment}
+                hint="PDF, PNG, JPG, MP4 up to 25MB"
+              />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" disabled={isSubmitting} className="w-full">

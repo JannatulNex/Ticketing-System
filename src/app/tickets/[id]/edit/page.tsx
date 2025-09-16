@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useParams, useRouter } from "next/navigation";
+import { FileDropzone } from "@/components/ui/file-dropzone";
 
 const UpdateTicketInput = z.object({
   subject: z.string().min(3).max(200),
@@ -18,11 +19,25 @@ const UpdateTicketInput = z.object({
 });
 type FormValues = z.infer<typeof UpdateTicketInput>;
 
+const extractFileName = (path?: string | null) => {
+  if (!path) return null;
+  try {
+    const segments = path.split("/");
+    return segments[segments.length - 1];
+  } catch {
+    return path;
+  }
+};
+
 export default function EditTicketPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params?.id);
   const router = useRouter();
   const token = useMemo(() => (typeof window !== "undefined" ? localStorage.getItem("token") : null), []);
+  const [newAttachment, setNewAttachment] = useState<File | null>(null);
+  const [currentAttachment, setCurrentAttachment] = useState<string | null>(null);
+  const [removeAttachment, setRemoveAttachment] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(UpdateTicketInput),
@@ -39,21 +54,44 @@ export default function EditTicketPage() {
       setValue('description', t.description);
       setValue('category', t.category);
       setValue('priority', t.priority);
+      setCurrentAttachment(t.attachment ?? null);
+      setRemoveAttachment(false);
+      setNewAttachment(null);
     };
     if (id) load();
   }, [id, setValue, token]);
 
   const onSubmit = async (data: FormValues) => {
+    setError(null);
+    const formData = new FormData();
+    formData.append('subject', data.subject);
+    formData.append('description', data.description);
+    formData.append('category', data.category);
+    formData.append('priority', data.priority);
+    if (newAttachment) {
+      formData.append('attachment', newAttachment);
+    } else if (removeAttachment && currentAttachment) {
+      formData.append('removeAttachment', 'true');
+    }
+
     const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(data),
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
     });
-    if (res.ok) router.push(`/tickets/${id}`);
+    if (res.ok) {
+      router.push(`/tickets/${id}`);
+    } else {
+      setError('Failed to update ticket');
+    }
   };
+
+  const existingFile = !removeAttachment && currentAttachment
+    ? {
+        name: extractFileName(currentAttachment) ?? 'attachment',
+        url: `http://localhost:4000${currentAttachment}`,
+      }
+    : null;
 
   return (
     <main className="max-w-2xl mx-auto px-6 py-8">
@@ -62,7 +100,7 @@ export default function EditTicketPage() {
           <h1 className="text-2xl font-semibold">Edit Ticket</h1>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
               <Label>Subject</Label>
               <Input {...register("subject")} />
@@ -102,6 +140,20 @@ export default function EditTicketPage() {
                 </select>
               </div>
             </div>
+            <div>
+              <Label>Attachment</Label>
+              <FileDropzone
+                value={newAttachment}
+                onChange={(file) => {
+                  setNewAttachment(file);
+                  if (file) setRemoveAttachment(false);
+                }}
+                existingFile={existingFile}
+                onRemoveExisting={currentAttachment ? () => setRemoveAttachment(true) : undefined}
+                hint="Upload a new file to replace the current attachment"
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
             <Button type="submit" disabled={isSubmitting} className="w-full">
               {isSubmitting ? "Saving..." : "Save"}
             </Button>
