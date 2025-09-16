@@ -73,6 +73,34 @@ export const ticketsRouter = (prisma: PrismaClient) => {
     res.json(ticket);
   });
 
+  // Delete ticket (owner or admin)
+  router.delete('/:id', async (req: Request, res: Response) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+    const user = req.user!;
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ message: 'Not found' });
+    if (user.role !== 'ADMIN' && ticket.userId !== user.id) return res.status(403).json({ message: 'Forbidden' });
+
+    await prisma.comment.deleteMany({ where: { ticketId: id } });
+    await prisma.chatMessage.deleteMany({ where: { ticketId: id } });
+    await prisma.ticket.delete({ where: { id } });
+
+    if (ticket.attachment) {
+      const relative = ticket.attachment.replace(/^\/+/, '');
+      const filePath = path.join(process.cwd(), relative);
+      try {
+        if (fs.existsSync(filePath)) {
+          await fs.promises.unlink(filePath);
+        }
+      } catch (err) {
+        console.error('Failed to delete attachment', err);
+      }
+    }
+
+    res.status(204).end();
+  });
+
   // Comments
   router.get('/:id/comments', async (req: Request, res: Response) => {
     const id = Number(req.params.id);
@@ -129,3 +157,5 @@ export const ticketsRouter = (prisma: PrismaClient) => {
 
   return router;
 };
+
+

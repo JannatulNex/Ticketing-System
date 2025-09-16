@@ -19,10 +19,24 @@ function fetcher<T>(url: string): Promise<T> {
 export default function TicketsPage() {
   const token = useMemo(() => (typeof window !== 'undefined' ? localStorage.getItem('token') : null), []);
   const role = decodeJwt(token)?.role;
-  const { data, error, isLoading } = useSWR<TicketRow[]>(
+  const { data, error, isLoading, mutate } = useSWR<TicketRow[]>(
     "http://localhost:4000/api/tickets",
     fetcher
   );
+
+  const handleDelete = async (ticketId: number) => {
+    if (!token) return;
+    if (!window.confirm('Delete this ticket?')) return;
+    const res = await fetch(`http://localhost:4000/api/tickets/${ticketId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      mutate();
+    } else {
+      alert('Failed to delete ticket');
+    }
+  };
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-4">
@@ -61,9 +75,14 @@ export default function TicketsPage() {
                   <td className="py-3 px-4"><span className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-xs">{t.status}</span></td>
                   <td className="py-3 px-4">{t.priority}</td>
                   <td className="py-3 px-4">
-                    <Button variant="outline" asChild>
-                      <Link href={`/tickets/${t.id}`}>View</Link>
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" asChild>
+                        <Link href={`/tickets/${t.id}`}>View</Link>
+                      </Button>
+                      <Button variant="destructive" onClick={() => handleDelete(t.id)}>
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))

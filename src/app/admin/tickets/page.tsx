@@ -1,6 +1,7 @@
 "use client";
 import useSWR from "swr";
 import { Badge, statusToBadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { decodeJwt } from "@/lib/jwt";
 import { useEffect, useMemo } from "react";
 
@@ -28,6 +29,20 @@ export default function AdminTicketsPage() {
     "http://localhost:4000/api/tickets",
     fetcher
   );
+  const handleDelete = async (id: number) => {
+    if (!token) return;
+    if (!window.confirm('Delete this ticket?')) return;
+    const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      mutate();
+    } else {
+      alert('Failed to delete ticket');
+    }
+  };
+
 
   const updateStatus = async (id: number, status: string) => {
     const res = await fetch(`http://localhost:4000/api/tickets/${id}/status`, {
@@ -55,6 +70,7 @@ export default function AdminTicketsPage() {
               <th className="py-3 px-4">User</th>
               <th className="py-3 px-4">Status</th>
               <th className="py-3 px-4">Change</th>
+              <th className="py-3 px-4">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
@@ -79,11 +95,16 @@ export default function AdminTicketsPage() {
                       <option>CLOSED</option>
                     </select>
                   </td>
+                  <td className="py-3 px-4">
+                    <Button variant="destructive" onClick={() => handleDelete(t.id)}>
+                      Delete
+                    </Button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className="py-4 px-4" colSpan={5}>No tickets.</td>
+                <td className="py-4 px-4" colSpan={6}>No tickets.</td>
               </tr>
             )}
           </tbody>

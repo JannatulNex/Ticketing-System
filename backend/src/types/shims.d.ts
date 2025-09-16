@@ -12,6 +12,7 @@ declare module 'express' {
   export interface Response {
     status(code: number): Response;
     json(body: any): Response;
+    end(body?: any): Response;
   }
   export type NextFunction = (...args: any[]) => any;
   export interface ExpressApp {

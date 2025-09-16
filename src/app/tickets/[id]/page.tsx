@@ -103,6 +103,26 @@ export default function TicketDetailsPage() {
     setChatInput("");
   };
 
+  const handleDelete = async () => {
+    const authToken = getToken();
+    if (!authToken) {
+      alert('You must be logged in to delete this ticket.');
+      return;
+    }
+    if (!window.confirm('Delete this ticket?')) return;
+    const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    if (res.ok) {
+      const decoded = decodeJwt(authToken);
+      const redirect = decoded?.role === 'ADMIN' ? '/admin/tickets' : '/tickets';
+      window.location.href = redirect;
+    } else {
+      alert('Failed to delete ticket');
+    }
+  };
+
   if (!ticket) return <main className="max-w-5xl mx-auto px-6 py-8">Loading...</main>;
 
   return (
@@ -118,51 +138,6 @@ export default function TicketDetailsPage() {
           </div>
         )}
       </div>
-      <div>
-        <Button variant="outline" onClick={() => (window.location.href = `/tickets/${id}/edit`)}>Edit</Button>
-      </div>
-
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
-          <h2 className="font-semibold mb-2 px-4 pt-4">Comments</h2>
-          <div className="space-y-3 max-h-72 overflow-auto border-t border-neutral-200 dark:border-neutral-800 p-3">
-            {comments.map((c) => (
-              <div key={c.id} className="text-sm">
-                <div className="text-neutral-500">{new Date(c.createdAt).toLocaleString()}</div>
-                <div>{c.text}</div>
-              </div>
-            ))}
-            {comments.length === 0 && <div className="text-sm text-neutral-500">No comments.</div>}
-          </div>
-          <div className="mt-3 space-y-2 p-4">
-            <Textarea rows={3} value={newComment} onChange={(e) => setNewComment(e.target.value)} />
-            <Button onClick={submitComment}>Add Comment</Button>
-          </div>
-        </div>
-        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
-          <h2 className="font-semibold mb-2 px-4 pt-4">Chat</h2>
-          <div className="space-y-3 max-h-72 overflow-auto border-t border-neutral-200 dark:border-neutral-800 p-3">
-            {messages.map((m, idx) => {
-              const me = decodeJwt(getToken())?.id === m.senderId;
-              const name = me ? 'You' : (m.sender?.username || `User ${m.senderId}`);
-              return (
-                <div key={m.id ?? idx} className={`text-sm flex ${me ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] ${me ? 'text-right' : 'text-left'}`}>
-                    <div className="text-[11px] text-neutral-500 mb-0.5">{name} • {new Date(m.createdAt).toLocaleTimeString()}</div>
-                    <div className={`inline-block rounded-md px-3 py-2 ${me ? 'bg-blue-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800'}`}>{m.message}</div>
-                  </div>
-                </div>
-              );
-            })}
-            {messages.length === 0 && <div className="text-sm text-neutral-500">No messages yet. Say hi!</div>}
-          </div>
-          <div className="mt-3 space-y-2 p-4">
-            <Textarea rows={2} value={chatInput} onChange={(e) => setChatInput(e.target.value)} />
-            <Button onClick={sendChat}>Send</Button>
-          </div>
-        </div>
-      </section>
-
       <section className="space-y-3">
         <h2 className="font-semibold">Attachment</h2>
         {ticket.attachment ? (
@@ -223,6 +198,54 @@ export default function TicketDetailsPage() {
           </Button>
         </form>
       </section>
+
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => (window.location.href = `/tickets/${id}/edit`)}>Edit</Button>
+        <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+      </div>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <h2 className="font-semibold mb-2 px-4 pt-4">Comments</h2>
+          <div className="space-y-3 max-h-72 overflow-auto border-t border-neutral-200 dark:border-neutral-800 p-3">
+            {comments.map((c) => (
+              <div key={c.id} className="text-sm">
+                <div className="text-neutral-500">{new Date(c.createdAt).toLocaleString()}</div>
+                <div>{c.text}</div>
+              </div>
+            ))}
+            {comments.length === 0 && <div className="text-sm text-neutral-500">No comments.</div>}
+          </div>
+          <div className="mt-3 space-y-2 p-4">
+            <Textarea rows={3} value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+            <Button onClick={submitComment}>Add Comment</Button>
+          </div>
+        </div>
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <h2 className="font-semibold mb-2 px-4 pt-4">Chat</h2>
+          <div className="space-y-3 max-h-72 overflow-auto border-t border-neutral-200 dark:border-neutral-800 p-3">
+            {messages.map((m, idx) => {
+              const me = decodeJwt(getToken())?.id === m.senderId;
+              const name = me ? 'You' : (m.sender?.username || `User ${m.senderId}`);
+              return (
+                <div key={m.id ?? idx} className={`text-sm flex ${me ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] ${me ? 'text-right' : 'text-left'}`}>
+                    <div className="text-[11px] text-neutral-500 mb-0.5">{name} • {new Date(m.createdAt).toLocaleTimeString()}</div>
+                    <div className={`inline-block rounded-md px-3 py-2 ${me ? 'bg-blue-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800'}`}>{m.message}</div>
+                  </div>
+                </div>
+              );
+            })}
+            {messages.length === 0 && <div className="text-sm text-neutral-500">No messages yet. Say hi!</div>}
+          </div>
+          <div className="mt-3 space-y-2 p-4">
+            <Textarea rows={2} value={chatInput} onChange={(e) => setChatInput(e.target.value)} />
+            <Button onClick={sendChat}>Send</Button>
+          </div>
+        </div>
+      </section>
+
+      
     </main>
   );
 }
