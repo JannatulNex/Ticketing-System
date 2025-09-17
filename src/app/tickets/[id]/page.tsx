@@ -64,7 +64,10 @@ export default function TicketDetailsPage() {
 
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-    const socket: Socket = io(SOCKET_BASE_URL);
+     const socket: Socket = io(SOCKET_BASE_URL, {
+      transports: ["websocket"], // force websocket
+      withCredentials: true,     // allow cookies/auth headers if needed
+    });
     socketRef.current = socket;
     socket.emit("join-room", id);
     socket.on("message", (msg: Message) => {

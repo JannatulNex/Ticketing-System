@@ -1,6 +1,6 @@
 import { API_BASE_URL, SOCKET_BASE_URL, apiUrl, backendUrl } from "@/lib/config";
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import io, { Socket } from "socket.io-client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export default function TicketDetailsPage() {
   const [newComment, setNewComment] = useState("");
   const [messages, setMessages] = useState<{ message: string; senderId: number; createdAt: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
+  const socketRef = useRef<Socket | null>(null);
 
   const token = useMemo(() => (typeof window !== "undefined" ? localStorage.getItem("token") : null), []);
 
@@ -34,15 +35,30 @@ export default function TicketDetailsPage() {
   }, [id, token]);
 
   useEffect(() => {
-    const s: Socket = io(SOCKET_BASE_URL);
-    s.emit("join-room", id);
+    const s: Socket = io(SOCKET_BASE_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+    });
+    socketRef.current = s;
+
+    s.on("connect", () => {
+      console.log("✅ Connected to socket:", SOCKET_BASE_URL);
+      s.emit("join-room", id);
+    });
+
+    s.on("connect_error", (err) => {
+      console.error("❌ Socket error:", err.message);
+    });
+
     s.on("message", (msg) => {
       if (msg.ticketId === id) {
-        setMessages((prev) => [{ message: msg.message, senderId: msg.senderId, createdAt: msg.createdAt }, ...prev]);
+        setMessages((prev) => [...prev, msg]);
       }
     });
+
     return () => {
       s.disconnect();
+      socketRef.current = null;
     };
   }, [id]);
 
@@ -63,16 +79,13 @@ export default function TicketDetailsPage() {
     }
   };
 
-  const sendChat = async () => {
-    if (!chatInput.trim()) return;
-    const senderId = 0; // Placeholder; would derive from token in a real app
-    const s: Socket = io(SOCKET_BASE_URL);
-    s.emit("join-room", id);
-    s.emit("message", { ticketId: id, message: chatInput, senderId });
+const sendChat = () => {
+  if (!chatInput.trim()) return;
+  if (socketRef.current) {
+    socketRef.current.emit("message", { ticketId: id, message: chatInput, senderId: 0 });
     setChatInput("");
-    s.disconnect();
-  };
-
+  }
+};
   if (!ticket) return <main className="container py-8">Loading...</main>;
 
   return (
