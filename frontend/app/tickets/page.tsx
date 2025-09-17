@@ -1,3 +1,4 @@
+import { API_BASE_URL, SOCKET_BASE_URL, apiUrl, backendUrl } from "@/lib/config";
 "use client";
 import useSWR from "swr";
 import Link from "next/link";
@@ -14,7 +15,7 @@ const fetcher = async (url: string) => {
 
 export default function TicketsPage() {
   const { data, error, isLoading, mutate } = useSWR(
-    "http://localhost:4000/api/tickets",
+    apiUrl("tickets"),
     fetcher
   );
 

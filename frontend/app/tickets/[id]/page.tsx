@@ -1,3 +1,4 @@
+import { API_BASE_URL, SOCKET_BASE_URL, apiUrl, backendUrl } from "@/lib/config";
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -20,11 +21,11 @@ export default function TicketDetailsPage() {
 
   useEffect(() => {
     const load = async () => {
-      const tRes = await fetch(`http://localhost:4000/api/tickets/${id}`, {
+      const tRes = await fetch(apiUrl(`tickets/${id}`), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (tRes.ok) setTicket(await tRes.json());
-      const cRes = await fetch(`http://localhost:4000/api/tickets/${id}/comments`, {
+      const cRes = await fetch(apiUrl(`tickets/${id}/comments`), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (cRes.ok) setComments(await cRes.json());
@@ -33,7 +34,7 @@ export default function TicketDetailsPage() {
   }, [id, token]);
 
   useEffect(() => {
-    const s: Socket = io("http://localhost:4000");
+    const s: Socket = io(SOCKET_BASE_URL);
     s.emit("join-room", id);
     s.on("message", (msg) => {
       if (msg.ticketId === id) {
@@ -47,7 +48,7 @@ export default function TicketDetailsPage() {
 
   const submitComment = async () => {
     if (!newComment.trim()) return;
-    const res = await fetch(`http://localhost:4000/api/tickets/${id}/comments`, {
+    const res = await fetch(apiUrl(`tickets/${id}/comments`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -65,7 +66,7 @@ export default function TicketDetailsPage() {
   const sendChat = async () => {
     if (!chatInput.trim()) return;
     const senderId = 0; // Placeholder; would derive from token in a real app
-    const s: Socket = io("http://localhost:4000");
+    const s: Socket = io(SOCKET_BASE_URL);
     s.emit("join-room", id);
     s.emit("message", { ticketId: id, message: chatInput, senderId });
     setChatInput("");

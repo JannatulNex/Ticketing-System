@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import axios from "axios";
+import { apiUrl } from "@/lib/config";
 
 type FormValues = z.infer<typeof RegisterInput>;
 
@@ -21,17 +23,18 @@ export default function RegisterPage() {
   const onSubmit = async (data: FormValues) => {
     setError(null);
     try {
-      const res = await fetch("http://localhost:4000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Registration failed");
-      const json = await res.json();
-      localStorage.setItem("token", json.token);
+      const res = await axios.post(apiUrl("auth/register"), data);
+      localStorage.setItem("token", res.data.token);
       window.location.href = "/dashboard";
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Registration failed");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const message = (error.response?.data as { message?: string } | undefined)?.message;
+        setError(message ?? "Registration failed");
+      } else if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Registration failed");
+      }
     }
   };
 

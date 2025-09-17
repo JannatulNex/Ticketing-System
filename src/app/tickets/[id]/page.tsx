@@ -1,4 +1,5 @@
 "use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import io, { Socket } from "socket.io-client";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { decodeJwt } from "@/lib/jwt";
+import { apiUrl, backendUrl, SOCKET_BASE_URL } from "@/lib/config";
 
 type Ticket = { id: number; subject: string; description: string; status: string; userId: number; attachment?: string | null };
 type CommentRow = { id: number; text: string; createdAt: string };
@@ -23,41 +25,49 @@ export default function TicketDetailsPage() {
 
   const getToken = () => (typeof window !== "undefined" ? localStorage.getItem("token") : null);
   const getAuthHeaders = useCallback((): Record<string, string> => {
-    const t = getToken();
-    return t ? { Authorization: `Bearer ${t}` } : {};
+    const token = getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }, []);
 
   useEffect(() => {
     const load = async () => {
-      const tRes = await fetch(`http://localhost:4000/api/tickets/${id}`, { headers: getAuthHeaders() });
-      if (tRes.ok) {
-        const ticketData: Ticket = await tRes.json();
+      const ticketRes = await fetch(apiUrl(`tickets/${id}`), { headers: getAuthHeaders() });
+      if (ticketRes.ok) {
+        const ticketData: Ticket = await ticketRes.json();
         setTicket(ticketData);
       }
-      const cRes = await fetch(`http://localhost:4000/api/tickets/${id}/comments`, { headers: getAuthHeaders() });
-      if (cRes.ok) {
-        const commentData: CommentRow[] = await cRes.json();
+
+      const commentsRes = await fetch(apiUrl(`tickets/${id}/comments`), { headers: getAuthHeaders() });
+      if (commentsRes.ok) {
+        const commentData: CommentRow[] = await commentsRes.json();
         setComments(commentData);
       }
-      const mRes = await fetch(`http://localhost:4000/api/tickets/${id}/messages`, { headers: getAuthHeaders() });
-      if (mRes.ok) {
-        const history: Message[] = await mRes.json();
-        setMessages(history.map((m) => ({ id: m.id, message: m.message, senderId: m.senderId, createdAt: m.createdAt, sender: m.sender, ticketId: m.ticketId })));
+
+      const messagesRes = await fetch(apiUrl(`tickets/${id}/messages`), { headers: getAuthHeaders() });
+      if (messagesRes.ok) {
+        const history: Message[] = await messagesRes.json();
+        setMessages(history.map((message) => ({
+          id: message.id,
+          message: message.message,
+          senderId: message.senderId,
+          createdAt: message.createdAt,
+          sender: message.sender,
+          ticketId: message.ticketId,
+        })));
       } else {
         setMessages([]);
       }
     };
-    if (id) load();
+
+    if (id) void load();
   }, [id, getAuthHeaders]);
 
   const socketRef = useRef<Socket | null>(null);
   useEffect(() => {
-     const s: Socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
-    transports: ["websocket"], // optional, ensures WebSocket connection
-  });
-    socketRef.current = s;
-    s.emit("join-room", id);
-    s.on("message", (msg: Message) => {
+    const socket: Socket = io(SOCKET_BASE_URL);
+    socketRef.current = socket;
+    socket.emit("join-room", id);
+    socket.on("message", (msg: Message) => {
       if (msg.ticketId === id) {
         setMessages((prev) => [
           ...prev,
@@ -73,14 +83,14 @@ export default function TicketDetailsPage() {
       }
     });
     return () => {
-      s.disconnect();
+      socket.disconnect();
       socketRef.current = null;
     };
   }, [id]);
 
   const submitComment = async () => {
     if (!newComment.trim()) return;
-    const res = await fetch(`http://localhost:4000/api/tickets/${id}/comments`, {
+    const res = await fetch(apiUrl(`tickets/${id}/comments`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -97,31 +107,31 @@ export default function TicketDetailsPage() {
 
   const sendChat = async () => {
     if (!chatInput.trim()) return;
-    const dt = decodeJwt(getToken());
-    const senderId = typeof dt?.id === 'number' ? dt!.id : 0;
-    const s = socketRef.current ?? io("http://localhost:4000");
-    s.emit("message", { ticketId: id, message: chatInput, senderId });
+    const decoded = decodeJwt(getToken());
+    const senderId = typeof decoded?.id === "number" ? decoded.id : 0;
+    const socket = socketRef.current ?? io(SOCKET_BASE_URL);
+    socket.emit("message", { ticketId: id, message: chatInput, senderId });
     setChatInput("");
   };
 
   const handleDelete = async () => {
     const authToken = getToken();
     if (!authToken) {
-      alert('You must be logged in to delete this ticket.');
+      alert("You must be logged in to delete this ticket.");
       return;
     }
     try {
       setIsDeleting(true);
-      const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
-        method: 'DELETE',
+      const res = await fetch(apiUrl(`tickets/${id}`), {
+        method: "DELETE",
         headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
         const decoded = decodeJwt(authToken);
-        const redirect = decoded?.role === 'ADMIN' ? '/admin/tickets' : '/tickets';
+        const redirect = decoded?.role === "ADMIN" ? "/admin/tickets" : "/tickets";
         window.location.href = redirect;
       } else {
-        alert('Failed to delete ticket');
+        alert("Failed to delete ticket");
       }
     } finally {
       setIsDeleting(false);
@@ -130,7 +140,7 @@ export default function TicketDetailsPage() {
 
   if (!ticket) return <main className="max-w-5xl mx-auto px-6 py-8">Loading...</main>;
 
-  const attachmentName = ticket.attachment ? ticket.attachment.split('/').pop() ?? 'attachment' : null;
+  const attachmentName = ticket.attachment ? ticket.attachment.split("/").pop() ?? "attachment" : null;
 
   return (
     <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
@@ -148,7 +158,7 @@ export default function TicketDetailsPage() {
           {ticket.attachment ? (
             <div className="mt-2 flex items-center gap-2 text-sm">
               <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-200">File</span>
-              <a className="text-blue-600 underline" href={`http://localhost:4000${ticket.attachment}`} target="_blank" rel="noreferrer">
+              <a className="text-blue-600 underline" href={backendUrl(ticket.attachment)} target="_blank" rel="noreferrer">
                 {attachmentName}
               </a>
             </div>
@@ -174,7 +184,7 @@ export default function TicketDetailsPage() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {isDeleting ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -185,30 +195,30 @@ export default function TicketDetailsPage() {
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
           <h2 className="font-semibold mb-2 px-4 pt-4">Comments</h2>
           <div className="space-y-3 max-h-72 overflow-auto border-t border-neutral-200 dark:border-neutral-800 p-3">
-            {comments.map((c) => (
-              <div key={c.id} className="text-sm">
-                <div className="text-neutral-500">{new Date(c.createdAt).toLocaleString()}</div>
-                <div>{c.text}</div>
+            {comments.map((comment) => (
+              <div key={comment.id} className="text-sm">
+                <div className="text-neutral-500">{new Date(comment.createdAt).toLocaleString()}</div>
+                <div>{comment.text}</div>
               </div>
             ))}
             {comments.length === 0 && <div className="text-sm text-neutral-500">No comments.</div>}
           </div>
           <div className="mt-3 space-y-2 p-4">
-            <Textarea rows={3} value={newComment} onChange={(e) => setNewComment(e.target.value)} />
+            <Textarea rows={3} value={newComment} onChange={(event) => setNewComment(event.target.value)} />
             <Button onClick={submitComment}>Add Comment</Button>
           </div>
         </div>
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
           <h2 className="font-semibold mb-2 px-4 pt-4">Chat</h2>
           <div className="space-y-3 max-h-72 overflow-auto border-t border-neutral-200 dark:border-neutral-800 p-3">
-            {messages.map((m, idx) => {
-              const me = decodeJwt(getToken())?.id === m.senderId;
-              const name = me ? 'You' : (m.sender?.username || `User ${m.senderId}`);
+            {messages.map((message, idx) => {
+              const me = decodeJwt(getToken())?.id === message.senderId;
+              const name = me ? "You" : message.sender?.username ?? `User ${message.senderId}`;
               return (
-                <div key={m.id ?? idx} className={`text-sm flex ${me ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] ${me ? 'text-right' : 'text-left'}`}>
-                    <div className="text-[11px] text-neutral-500 mb-0.5">{name} - {new Date(m.createdAt).toLocaleTimeString()}</div>
-                    <div className={`inline-block rounded-md px-3 py-2 ${me ? 'bg-blue-600 text-white' : 'bg-neutral-100 dark:bg-neutral-800'}`}>{m.message}</div>
+                <div key={message.id ?? idx} className={`text-sm flex ${me ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] ${me ? "text-right" : "text-left"}`}>
+                    <div className="text-[11px] text-neutral-500 mb-0.5">{name} - {new Date(message.createdAt).toLocaleTimeString()}</div>
+                    <div className={`inline-block rounded-md px-3 py-2 ${me ? "bg-blue-600 text-white" : "bg-neutral-100 dark:bg-neutral-800"}`}>{message.message}</div>
                   </div>
                 </div>
               );
@@ -216,7 +226,7 @@ export default function TicketDetailsPage() {
             {messages.length === 0 && <div className="text-sm text-neutral-500">No messages yet. Say hi!</div>}
           </div>
           <div className="mt-3 space-y-2 p-4">
-            <Textarea rows={2} value={chatInput} onChange={(e) => setChatInput(e.target.value)} />
+            <Textarea rows={2} value={chatInput} onChange={(event) => setChatInput(event.target.value)} />
             <Button onClick={sendChat}>Send</Button>
           </div>
         </div>
@@ -224,4 +234,3 @@ export default function TicketDetailsPage() {
     </main>
   );
 }
-

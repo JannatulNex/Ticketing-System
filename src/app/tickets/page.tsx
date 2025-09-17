@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useMemo, useState } from "react";
 import { decodeJwt } from "@/lib/jwt";
+import {  apiUrl  } from "@/lib/config";
 
 type TicketRow = { id: number; subject: string; status: string; priority?: string };
 
@@ -22,7 +23,7 @@ export default function TicketsPage() {
   const role = decodeJwt(token)?.role;
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const { data, error, isLoading, mutate } = useSWR<TicketRow[]>(
-    "http://localhost:4000/api/tickets",
+    apiUrl("tickets"),
     fetcher
   );
 
@@ -33,7 +34,7 @@ export default function TicketsPage() {
     }
     try {
       setDeletingId(ticketId);
-      const res = await fetch(`http://localhost:4000/api/tickets/${ticketId}`, {
+      const res = await fetch(apiUrl(`tickets/${ticketId}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

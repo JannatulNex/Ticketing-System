@@ -21,13 +21,23 @@ const ensureUploadsDir = (dir) => {
 };
 ensureUploadsDir(uploadsDir);
 ensureUploadsDir(legacyUploadsDir);
+const allowedOrigins = env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+};
 const app = express();
-app.use(cors({ origin: env.CORS_ORIGIN }));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(uploadsDir));
 app.use('/uploads', express.static(legacyUploadsDir));
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: env.CORS_ORIGIN } });
+const io = new Server(server, { cors: { origin: allowedOrigins.includes('*') ? '*' : allowedOrigins, credentials: true } });
 const prisma = new PrismaClient();
 // Health
 app.get('/health', (_req, res) => res.json({ ok: true }));

@@ -4,6 +4,7 @@ import { Badge, statusToBadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { decodeJwt } from "@/lib/jwt";
+import {  apiUrl } from "@/lib/config";
 import { useEffect, useMemo, useState } from "react";
 
 type AdminTicketRow = { id: number; subject: string; status: string; userId: number };
@@ -28,7 +29,7 @@ export default function AdminTicketsPage() {
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const { data, error, isLoading, mutate } = useSWR<AdminTicketRow[]>(
-    "http://localhost:4000/api/tickets",
+    apiUrl("tickets"),
     fetcher
   );
 
@@ -39,7 +40,7 @@ export default function AdminTicketsPage() {
     }
     try {
       setDeletingId(id);
-      const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
+      const res = await fetch(apiUrl(`tickets/${id}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -54,7 +55,7 @@ export default function AdminTicketsPage() {
   };
 
   const updateStatus = async (id: number, status: string) => {
-    const res = await fetch(`http://localhost:4000/api/tickets/${id}/status`, {
+    const res = await fetch(apiUrl(`tickets/${id}/status`), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

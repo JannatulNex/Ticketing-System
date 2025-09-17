@@ -1,4 +1,5 @@
 "use client";
+
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import axios from "axios";
+import { apiUrl } from "@/lib/config";
 
 type FormValues = z.infer<typeof RegisterInput>;
 
@@ -19,7 +21,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: FormValues) => {
     setError(null);
     try {
-      const res = await axios.post("http://localhost:4000/api/auth/register", data);
+      const res = await axios.post(apiUrl("auth/register"), data);
       localStorage.setItem("token", res.data.token);
       window.location.href = "/dashboard";
     } catch (e: any) {
@@ -58,4 +60,3 @@ export default function RegisterPage() {
     </main>
   );
 }
-

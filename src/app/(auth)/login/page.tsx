@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { decodeJwt } from "@/lib/jwt";
+import axios from "axios";
+import { apiUrl } from "@/lib/config";
 
 type FormValues = z.infer<typeof LoginInput>;
 
@@ -22,18 +24,18 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setError(null);
     try {
-      const res = await fetch("http://localhost:4000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Login failed");
-      const json = await res.json();
-      localStorage.setItem("token", json.token);
-      const role = decodeJwt(json.token)?.role;
-      window.location.href = role === 'ADMIN' ? "/admin/tickets" : "/dashboard";
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Login failed");
+      const res = await axios.post(apiUrl("auth/login"), data);
+      localStorage.setItem("token", res.data.token);
+      window.location.href = "/dashboard";
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const message = (error.response?.data as { message?: string } | undefined)?.message;
+        setError(message ?? "Login failed");
+      } else if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Login failed");
+      }
     }
   };
 

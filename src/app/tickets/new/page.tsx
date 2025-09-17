@@ -1,4 +1,5 @@
 "use client";
+
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { apiUrl } from "@/lib/config";
 
 type FormValues = z.infer<typeof CreateTicketInput>;
 
@@ -34,7 +36,7 @@ export default function NewTicketPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:4000/api/tickets", {
+      const res = await fetch(apiUrl("tickets"), {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         body: formData,

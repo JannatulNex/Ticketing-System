@@ -1,4 +1,5 @@
 "use client";
+
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import axios from "axios";
+import { apiUrl } from "@/lib/config";
 
 type FormValues = z.infer<typeof LoginInput>;
 
@@ -19,7 +21,7 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setError(null);
     try {
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, data);
+      const res = await axios.post(apiUrl("auth/login"), data);
       localStorage.setItem("token", res.data.token);
       window.location.href = "/dashboard";
     } catch (e: any) {
@@ -51,4 +53,3 @@ export default function LoginPage() {
     </main>
   );
 }
-

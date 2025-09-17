@@ -1,3 +1,4 @@
+import { API_BASE_URL, SOCKET_BASE_URL, apiUrl, backendUrl } from "@/lib/config";
 "use client";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -21,7 +22,7 @@ export default function NewTicketPage() {
     setError(null);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch("http://localhost:4000/api/tickets", {
+      const res = await fetch(apiUrl("tickets"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

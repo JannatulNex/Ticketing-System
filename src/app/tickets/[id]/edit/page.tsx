@@ -1,5 +1,7 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useParams, useRouter } from "next/navigation";
 import { FileDropzone } from "@/components/ui/file-dropzone";
+import { apiUrl, backendUrl } from "@/lib/config";
 
 const UpdateTicketInput = z.object({
   subject: z.string().min(3).max(200),
@@ -17,7 +19,6 @@ const UpdateTicketInput = z.object({
   category: z.enum(["Billing", "Technical", "General"]),
   priority: z.enum(["Low", "Medium", "High", "Urgent"]),
 });
-type FormValues = z.infer<typeof UpdateTicketInput>;
 
 const extractFileName = (path?: string | null) => {
   if (!path) return null;
@@ -34,62 +35,63 @@ export default function EditTicketPage() {
   const id = Number(params?.id);
   const router = useRouter();
   const token = useMemo(() => (typeof window !== "undefined" ? localStorage.getItem("token") : null), []);
+
   const [newAttachment, setNewAttachment] = useState<File | null>(null);
   const [currentAttachment, setCurrentAttachment] = useState<string | null>(null);
   const [removeAttachment, setRemoveAttachment] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<z.infer<typeof UpdateTicketInput>>({
     resolver: zodResolver(UpdateTicketInput),
   });
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
+      const res = await fetch(apiUrl(`tickets/${id}`), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) return;
-      const t = await res.json();
-      setValue('subject', t.subject);
-      setValue('description', t.description);
-      setValue('category', t.category);
-      setValue('priority', t.priority);
-      setCurrentAttachment(t.attachment ?? null);
+      const ticket = await res.json();
+      setValue("subject", ticket.subject);
+      setValue("description", ticket.description);
+      setValue("category", ticket.category);
+      setValue("priority", ticket.priority);
+      setCurrentAttachment(ticket.attachment ?? null);
       setRemoveAttachment(false);
       setNewAttachment(null);
     };
-    if (id) load();
+    if (id) void load();
   }, [id, setValue, token]);
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: z.infer<typeof UpdateTicketInput>) => {
     setError(null);
     const formData = new FormData();
-    formData.append('subject', data.subject);
-    formData.append('description', data.description);
-    formData.append('category', data.category);
-    formData.append('priority', data.priority);
-    if (newAttachment) {
-      formData.append('attachment', newAttachment);
-    } else if (removeAttachment && currentAttachment) {
-      formData.append('removeAttachment', 'true');
+    formData.append("subject", data.subject);
+    formData.append("description", data.description);
+    formData.append("category", data.category);
+    formData.append("priority", data.priority);
+    if (newAttachment) formData.append("attachment", newAttachment);
+    if (!newAttachment && removeAttachment && currentAttachment) {
+      formData.append("removeAttachment", "true");
     }
 
-    const res = await fetch(`http://localhost:4000/api/tickets/${id}`, {
-      method: 'PUT',
+    const res = await fetch(apiUrl(`tickets/${id}`), {
+      method: "PUT",
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body: formData,
     });
+
     if (res.ok) {
       router.push(`/tickets/${id}`);
     } else {
-      setError('Failed to update ticket');
+      setError("Failed to update ticket");
     }
   };
 
   const existingFile = !removeAttachment && currentAttachment
     ? {
-        name: extractFileName(currentAttachment) ?? 'attachment',
-        url: `http://localhost:4000${currentAttachment}`,
+        name: extractFileName(currentAttachment) ?? "attachment",
+        url: backendUrl(currentAttachment),
       }
     : null;
 
@@ -105,14 +107,14 @@ export default function EditTicketPage() {
               <Label>Subject</Label>
               <Input {...register("subject")} />
               {errors.subject?.message && (
-                <p className="text-sm text-red-600 mt-1">{errors.subject?.message as string}</p>
+                <p className="text-sm text-red-600 mt-1">{errors.subject.message}</p>
               )}
             </div>
             <div>
               <Label>Description</Label>
               <Textarea rows={5} {...register("description")} />
               {errors.description?.message && (
-                <p className="text-sm text-red-600 mt-1">{errors.description?.message as string}</p>
+                <p className="text-sm text-red-600 mt-1">{errors.description.message}</p>
               )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
