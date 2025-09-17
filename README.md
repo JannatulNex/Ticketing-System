@@ -1,6 +1,6 @@
 **Customer Support System**
 
-- Monorepo with `frontend` (Next.js + Tailwind + shadcn-style components) and `backend` (Express + Prisma + Socket.IO).
+- Monorepo with a Next.js frontend (under `src/`) and `backend` (Express + Prisma + Socket.IO).
 - Shared Zod schemas live in `packages/schemas` for DRY validation/types across FE/BE.
 
 **Requirements**
@@ -18,10 +18,10 @@
 
 **Run**
 - Backend: `cd my-app/backend && npm install && npm run dev` (http://localhost:4000)
-- Frontend (existing app in `my-app`): `cd my-app && npm install && npm run dev` (http://localhost:3000)
+- Frontend (root Next.js app under `src`): `cd my-app && npm install && npm run dev` (http://localhost:3000)
 
 **Notes**
-- UI components are shadcn-style and colocated under `frontend/components/ui` to avoid CLI dependency and keep DRY.
+- UI components are shadcn-style and colocated under `src/components/ui` to avoid CLI dependency and keep DRY.
 - Validation schemas are shared via `@support/schemas` package.
 - Socket.IO room key: `ticket-${ticketId}`.
 

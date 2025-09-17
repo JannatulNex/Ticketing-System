@@ -82,6 +82,21 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+        <h3 className="text-sm font-medium text-center mb-2 text-blue-600">
+          Demo Credentials
+        </h3>
+        <div className="text-sm space-y-1 text-blue-600">
+          <div>
+            <span className="font-semibold">Admin User: </span>
+            admin@example.com
+          </div>
+          <div>
+            <span className="font-semibold">Admin Password: </span>
+            AdminPass12025!
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
