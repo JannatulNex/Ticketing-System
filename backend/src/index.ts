@@ -12,7 +12,7 @@ import { authenticate } from './middleware/auth.js';
 import { ticketsRouter } from './routes/tickets.js';
 
 const env = loadEnv();
-console.log('✅ Loaded ENV:', env);  // Debug: দেখাবে env ঠিকমতো লোড হয়েছে
+console.log('✅ Loaded ENV:', env);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.resolve(__dirname, '../uploads');

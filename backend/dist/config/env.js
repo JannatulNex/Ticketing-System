@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
-// .env ফাইল লোড করা হচ্ছে
 dotenv.config({ path: '.env' });
 const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
